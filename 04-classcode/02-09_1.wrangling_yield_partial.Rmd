@@ -1,0 +1,405 @@
+---
+title: "1.wrangling-yield"
+output: html_document
+---
+# Learning objectives  
+Today's learning objectives are:  
+- Talk about the role of yield monitor data in ag  
+- Import spatial data  
+- Learn and implement data wrangling steps  
+- Learn and implement yield monitor data cleaning steps  
+- Compare numerically and graphically raw and cleaned yield monitor data  
+
+
+# Setup
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+#loading packages (add to the list as we need) 
+library(readr)
+library(janitor)
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(sf)
+```
+
+```{r reading data}
+yield17 
+
+yield17
+```
+
+# Exploratory data analysis
+```{r class}
+class(yield17)
+```
+
+```{r summary}
+
+```
+
+What columns do you think are relevant?  
+
+```{r yield distribution - density plot}
+
+
+```
+
+```{r speed distribution - density plot}
+
+
+```
+
+```{r yield map}
+
+
+```
+
+```{r yield restricted map}
+ggplot(filter(yield17, Dry_Yield<5000) , aes(x=POINT_X,
+                                             y=POINT_Y))+
+  geom_point(aes(color=Dry_Yield))+
+  scale_color_gradient(low="red", high = "green")
+
+```
+
+```{r yield x speed}
+
+
+```
+
+Do we need to clean this data?  
+From a yield map quality perspective, what steps would you do?  
+-   
+-  
+
+```{r data needs}
+yield17
+```
+
+From a data wrangling perspective, what steps would you do?  
+- standardize column naming style (for ease of use)  
+- select only needed columns:  
+- Speed  
+- Dry_Yield  
+- POINT_X  
+- POINT_Y  
+
+- rename columns to include measurement units  
+- create columns in SI system  
+- transform it into spatial object (as of now, it is only a data frame)  
+- transform from unprojected to projected  
+
+# Wrangling  
+```{r yield17_w1 - clean_names}
+# Standardizing names
+yield17_w1 
+
+
+yield17_w1
+```
+
+```{r yield17_w2 - select}
+# Selecting needed columns
+yield17_w2 
+
+
+yield17_w2
+```
+
+
+```{r yield17_w3 - rename}
+# Rename to include units
+yield17_w3 
+
+yield17_w3
+
+```
+
+```{r yield17_w4 - mutate}
+# Creating yield and speed in SI
+yield17_w4
+
+# converting speed from mph to kmh: *1.09728
+# converting yield from lb/ac to kg/ha: *0.453592/0.404686
+yield17_w4
+```
+
+```{r yield17_w5 - st_as_sf}
+# Creating spatial object
+yield17_w5 
+
+yield17_w5
+
+class(yield17_w5)
+```
+CRS: NA? we need to fix that.  
+
+
+```{r yield17_w6 - st_set_crs}
+# Assigning native coordinate reference system EPSG identifier
+yield17_w6 
+
+yield17_w6
+```
+Geodetic CRS is fixed now. But what if we want it on a projected crs?  
+
+```{r yield17_w7 - st_transform}
+# Transforming from unprojected to projected (UTM NAD83 16 n)
+yield17_w7
+
+yield17_w7
+```
+
+Projected CRS fixed!  
+
+```{r yield17_w - piping it all}
+yield17_w <- yield17 %>% 
+  clean_names() %>%
+  dplyr::select(speed,
+                dry_yield,
+                point_x,
+                point_y) %>%
+  rename(speed_mph=speed,
+         yield_lbac=dry_yield) %>%
+  mutate(yield_kgha=yield_lbac*0.453592/0.404686,
+         speed_kmh=speed_mph*1.09728) %>%
+  st_as_sf(coords = c("point_x", "point_y")) %>%
+  st_set_crs(value = 4326) %>%
+  st_transform(crs = 6345)
+
+yield17_w
+```
+
+# Yield Editor  
+```{r yield map raw}
+ggplot(yield17_w)+
+  geom_sf(aes(color=yield_lbac), size=.1)+
+  scale_color_gradient(low="red", high = "green")
+
+
+```
+
+Different shape than original plot, now it is a spatial object.  
+
+Today we are applying 5 filters:  
+  - Min and max yield  
+  - Min and max speed  
+  - Position  
+
+## Min/max yield
+```{r min max yield - density}
+ggplot(data=yield17_w, aes(x=yield_lbac))+
+  geom_density()
+
+```
+
+```{r yield summary}
+
+
+```
+
+
+```{r yield quantiles}
+lowq_yield 
+lowq_yield
+
+upq_yield 
+upq_yield
+
+iqr <- upq_yield - lowq_yield
+iqr
+
+miny 
+miny
+
+maxy 
+maxy
+```
+
+```{r min max yield annotated- density}
+ggplot()+
+  geom_density(data=yield17_w, aes(x=yield_lbac))
+
+  #annotate(geom="rect",
+  #         ymin=0, ymax=Inf,
+  #         xmin=miny, xmax=maxy,
+  #         alpha=.6, 
+  #         fill="green")
+
+```
+
+
+```{r yield filtering}
+yield17_w_yf 
+
+yield17_w_yf
+```
+Before filtering we had a total of 31,724 data rows.  
+How many rows now after filtering?  
+
+
+```{r yield filtered - stats}
+summary(yield17_w_yf$yield_lbac) 
+```
+
+All right, all done filtering based on yield min and max.  
+Now let's do the same for speed.  
+
+## Min/max speed  
+```{r min max speed - density}
+ggplot(data=yield17_w, aes(x=speed_mph))+
+  geom_density()
+
+```
+
+```{r speed summary}
+summary(yield17_w$speed_mph)
+```
+
+
+```{r speed quantiles}
+lowq_speed <- quantile(yield17_w$speed_mph, 0.08)
+lowq_speed
+
+upq_speed <- quantile(yield17_w$speed_mph, 0.99)
+upq_speed
+
+iqr <- upq_speed - lowq_speed
+iqr
+
+minv <- lowq_speed - (0.18*iqr)
+minv
+
+maxv <- upq_speed + (0.18*iqr)
+maxv
+```
+
+
+```{r min max speed annotated- density}
+ggplot()+
+  geom_density(data=yield17_w, aes(x=speed_mph))+
+  geom_vline(xintercept = lowq_speed, color="red", linetype=2)+
+  geom_vline(xintercept = upq_speed, color="blue", linetype=2)+
+  geom_vline(xintercept = minv, color="red", linetype=1)+
+  geom_vline(xintercept = maxv, color="blue", linetype=1)+
+  annotate(geom="rect",
+           ymin=0, ymax=Inf,
+           xmin=minv, xmax=maxv,
+           alpha=.6, 
+           fill="green")
+
+```
+
+```{r speed filtering}
+yield17_w_sf 
+
+yield17_w_sf
+```
+Before filtering we had a total of 30,385 data rows.  
+How many rows now after filtering?  
+
+
+```{r speed filtered - stats}
+summary(yield17_w_sf$speed_mph) 
+```
+
+# Position  
+```{r importing boundary}
+boundary 
+
+boundary
+```
+
+```{r boundary_w}
+boundary_w 
+  
+boundary_w
+```
+
+```{r boundary_w plot}
+
+```
+
+Let's create a negative buffer of 20-m.  
+```{r buffer}
+buffer 
+
+buffer
+```
+
+```{r buffer plot}
+yieldmap_raw+ 
+  geom_sf(data=boundary_w, fill=NA)
+
+```
+
+```{r position filtering}
+yield17_w_pf 
+
+yield17_w_pf
+```
+Before filtering we had a total of 28,950 data rows.  
+How many rows now after filtering?  
+
+```{r position summary}
+summary(yield17_w_pf$yield_lbac)
+```
+
+# Raw vs Cleaned data  
+## Summary statistics
+```{r raw summary}
+yield17_w %>%
+  summarise(
+            )
+```
+
+```{r raw filtered}
+yield17_w_pf %>%
+  summarise(n=length(yield_lbac),
+            min=min(yield_lbac),
+            mean=mean(yield_lbac),
+            max=max(yield_lbac),
+            sd=sd(yield_lbac),
+            cv=(sd/mean)*100
+            )
+```
+
+## Density plot  
+```{r}
+
+```
+
+# Map  
+```{r raw map}
+yieldmap_raw
+```
+
+```{r cleaned map}
+yieldmap_clean <- ggplot(yield17_w_pf)+
+  geom_sf(aes(color=yield_lbac), size=.1)+
+  scale_color_gradient(low="red", high = "green")
+
+yieldmap_clean
+```
+
+```{r side-by-side maps}
+#install.packages("patchwork")
+library(patchwork)
+
+
+# saving to file
+
+```
+
+# Summary  
+Today we did a lot! Here's a snapshot:  
+- Imported a raw yield monitor data, explored it numerically and graphically  
+- Wrangled this data set by implementing multiple steps  
+- Learned about using the `%>%` to combine multiple steps into one overall workflow  
+- Learned about and implemented 5 yield filters (yield, speed, position)  
+- Compared raw and cleaned yield monitor data  
+
+
+

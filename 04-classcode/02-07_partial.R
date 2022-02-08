@@ -1,6 +1,7 @@
 ## 2022 CRSS 4060/6060 - Feb 07 Agenda
 
 # Housekeeping:
+## Check if downloaded latest version of GitHub
 ## Blog: instructions (bookmark it!)
 ## GitHub: material, constantly being updated  
 
@@ -26,6 +27,7 @@
 ### Colored syntax
 ### Syntax suggestions
 
+
 ## RStudio panels
 ### Script  
 ### Console
@@ -34,11 +36,15 @@
 
 # 2) R terminology ----
 ## Object
+43/13
 
+a <- 43/13
 a
 
+b <- c(10, 5, 2)
 b
 
+c <- "workshop"
 c
 
 ## Object classes
@@ -48,24 +54,40 @@ d <- data.frame(number = b,
 
 d
 
+b/13
+
 ### Matrices
 
+e <- matrix(c(b,b), ncol = 2 )
 e
 
+# concatenate 
+
 ### Lists 
+f <- list("number" = a,
+          "numbers" = b,
+          "data" = d
+          )
+
 f
 
 class(f)
 
-class(f$number)
+class(f$data)
 
+class(d$id)
 
 ## Function
+mean(b)
+
 
 ## Argument
 help("mean")
-
+b
+b2 <- c(10,5,2,NA)
 b2
+
+mean(b2, na.rm = TRUE)
 
 ## Package
 ## Install vs. load a package
