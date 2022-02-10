@@ -14,7 +14,7 @@ After reading the paper **"2012 Sudduth et al. - Yield editor 2.0"**, answer the
 
 ---
 
-After answering all questions, include your initials on the file name (e.g., A1-questions-LMB.md) and send to **lmbastos@uga.edu** by **Tuesday, Feb 08 11:59 pm**.  
+After answering all questions, include your initials on the file name (e.g., A1-questions-LMB.md) and send to **lmbastos@uga.edu** by **Monday, Feb 14 11:59 pm**.  
 
 
 
