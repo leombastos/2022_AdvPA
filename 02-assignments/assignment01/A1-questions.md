@@ -4,7 +4,9 @@ After reading the paper **"2012 Sudduth et al. - Yield editor 2.0"**, answer the
 
 1. Why is it important to clean yield monitor data?  
 
+
 2. What are the main sources of error on yield monitor data?  
+
 
 3. How many filtering methods have been implemented in Yield Editor 2.0?  
 
