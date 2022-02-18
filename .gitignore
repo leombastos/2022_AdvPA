@@ -39,6 +39,7 @@ vignettes/*.pdf
 .Renviron
 
 # /05-classcode_completed/
+/05-classcode_completed/02-18_2.interpolation_completed.Rmd
 
 # Assginment answers
 /02-assignments/assignment01/answers/
