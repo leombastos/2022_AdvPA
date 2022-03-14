@@ -1,0 +1,211 @@
+---
+title: "03-16_3.yieldstability"
+output: html_document
+---
+
+# Learning Objectives  
+Today, our learning objectives are to:  
+- Import **interpolated cleaned yield data** for 3 years  
+- Create year-specific spatial yield stability areas  
+- Create spatio-temporal yield stability areas  
+- Export the final yield stability layer  
+
+# Setup  
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+# Packages
+library(dplyr)
+library(tidyr)
+library(sf)
+library(ggplot2)
+library(viridis)
+library(ggthemes)
+library(tibble)
+#install.packages("tibble")
+
+```
+
+```{r yieldic17}
+yieldic17
+
+yieldic17
+
+summary(yieldic17)
+```
+
+
+```{r yieldic19}
+yieldic19 
+
+yieldic19
+
+summary(yieldic19)
+```
+
+
+```{r yieldic20}
+yieldic20 
+
+yieldic20
+
+summary(yieldic20)
+```
+> What year was the highest yielding?  
+> What about the lowest yielding?  
+
+> Same number of observations for all layers?  
+> Why is that?  
+
+# Spatial stability  
+Every time we deal with yield data across various years/fields/crops, there are challenges:  
+- If different years/fields/crops, how to compare?  
+- Even if same field but different years/crops, how to compare?  
+
+Some solutions:  
+- Standardize by mean/median/max (numerical). Ex. field mean in a given year was 1500 lb/ac, so divide all other yield values from that year by 1500.  
+
+- Standardize by quantile (categorical). Ex. field median (e.g., 50% quantile) was 2000 lb/ac, so all observations below 2000 are classified as "low", and all above 2000 are classified as "high" for that year.  
+
+**In our case, we are using the quantile approach.**
+First let's calculate median yield per year, and then classify all yield observations as lower than the median (low) or higher than the median (high).  
+
+Beginning with 2017 yield data.
+```{r s_17}
+s_17 
+
+s_17
+```
+
+
+Let's check how does this classification look like in space.  
+```{r s_17 map}
+s_17_map 
+
+
+s_17_map 
+```
+
+Repeat the same steps for 2019.  
+```{r s_19}
+s_19 <- yieldic19 %>%
+  rownames_to_column(var = "id") %>%
+  mutate(medianyield_lbac=median(ipyield_lbac)) %>%
+  mutate(snyield=case_when(
+    ipyield_lbac >= medianyield_lbac ~ "high",
+    ipyield_lbac < medianyield_lbac ~ "low"
+  )) %>%
+  dplyr::select(id, snyield_19=snyield, geometry) 
+
+s_19
+```
+
+```{r s_19 map}
+s_19_map <- ggplot()+
+  geom_sf(data = s_19,
+          aes(fill=snyield_19), color=NA)+
+  scale_fill_viridis_d(option="E")+
+    labs(title="2019")+
+  theme_map()+
+  theme(legend.position = "none")
+
+
+s_19_map 
+```
+Repeat the same steps for 2020.  
+```{r s_20}
+s_20 <- yieldic20 %>%
+  rownames_to_column(var = "id") %>%
+  mutate(medianyield_lbac=median(ipyield_lbac)) %>%
+  mutate(snyield=case_when(
+    ipyield_lbac >= medianyield_lbac ~ "high",
+    ipyield_lbac < medianyield_lbac ~ "low"
+  )) %>%
+  dplyr::select(id, snyield_20=snyield, geometry) 
+
+s_20
+```
+
+```{r s_20 map}
+s_20_map <- ggplot()+
+  geom_sf(data = s_20,
+          aes(fill=snyield_20), color=NA)+
+  scale_fill_viridis_d(option="E")+
+  labs(title="2020")+
+  theme_map()+
+  theme(legend.position = "none")
+
+s_20_map 
+```
+
+Let's plot all 3 maps side-by-side to assist in visualizing them.  
+```{r all maps}
+library(patchwork)
+
+
+```
+
+
+
+# Spatio-temporal stability  
+To perform a temporal analysis, we need to merge all three data frames into one.  
+
+After joining the data sets, we still only have their information on year-specific spatial classification (low and high yielding). 
+
+> How can we merge these pieces of information to create a spatial-temporal classification?  
+
+Here's how I want to classify our spatial-temporal classes:  
+- If a pixel was low yielding in all 3 years, then it gets classified as stable low (sl)  
+
+- If a pixel was high yielding in all 3 years, then it gets classified as stable high (sh)  
+
+- Otherwise, then it gest classified as unstable (uns).  
+
+
+```{r st_all}
+st_all 
+
+st_all
+```
+
+
+```{r st_all_map}
+ggplot()+
+  geom_sf(data = st_all,
+          aes(fill=stnyield), color=NA)+
+    scale_fill_viridis_d(option="C")+
+  theme_map()
+
+```
+> Just eyeballing, what proportion of this field do you think is unstable? 20%? 50%?  
+
+
+
+
+
+
+Let's calculate below:  
+```{r proportion per stability zone}
+
+
+```
+Imagine this is your farm, and I tell you that in about 43% of your field, yield can be among highest or lowest just depending on the year.  
+
+> How would you manage it?  
+
+
+# Exporting  
+Let's export this data set so we can use it again in a future exercise.  
+```{r exporting yield stability}
+
+
+```
+
+# Summary  
+
+Today we:  
+- Imported all three interpolated cleaned yield data  
+- Classified each year-specific yield pixel as low vs. high (spatial stability)  
+- Joined the three data sets, and classified each pixel as stable high, stable low, or unstable (spatial-temporal stability)  
+- Exported the spatial-temporal stability layer   
+

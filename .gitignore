@@ -39,7 +39,7 @@ vignettes/*.pdf
 .Renviron
 
 # /05-classcode_completed/
-/05-classcode_completed/02-18_2.interpolation_completed.Rmd
+/05-classcode_completed/03-16_3.yieldstability_complete.Rmd
 
 # Assginment answers
 /02-assignments/assignment01/answers/
