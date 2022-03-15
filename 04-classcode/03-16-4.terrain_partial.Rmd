@@ -1,0 +1,294 @@
+---
+title: "03-16-4.terrain"
+output: html_document
+---
+
+# Learning Objectives  
+Today, our objectives are to:  
+- Import point vector layer of elevation  
+- Interpolate elevation data  
+- Compute secondary terrain variables such as slope, aspect, and flow direction  
+- Export all soil terrain layers to file  
+
+# Setup  
+```{r setup, include=FALSE, warning=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+# Packages
+library(dplyr)
+library(tidyr)
+library(janitor)
+library(readr)
+library(sf) #vector manipulation
+library(ggplot2)
+library(viridis)
+library(ggthemes)
+library(gstat) #IDW
+library(stars) #raster manipulation
+library(terra) #topographical variables
+library(patchwork) #combining multiple plots  
+library(tibble) #rownames to column
+
+```
+
+```{r defining map theme}
+mytheme_map <- 
+  theme_map()+
+  theme(legend.position = "right",
+        panel.background = element_rect(fill="gray80",
+                                        color=NA),
+        plot.background = element_rect(fill="gray80",
+                                       color=NA),
+        legend.title = element_text(size=14),
+        legend.text = element_text(size=12))
+
+```
+
+```{r reading elevation data}
+elev 
+
+elev
+```
+Notice how  we used `read_csv` to import the elevation data set.  
+As such, as of now R does not know this is a spatial object or with what CRS it was collected.  
+
+Thus, let's do some wrangling to address that and other aspects.  
+
+# Wrangling  
+```{r elev_w}
+elev_w <- elev %>%
+  clean_names() %>%
+  rename(elev_ft=grid_code) %>%
+  mutate(elev_m=elev_ft*0.3048) %>%
+  dplyr::select(elev_m,
+                point_x,
+                point_y) %>%
+  st_as_sf(coords = c("point_x", "point_y")) %>%
+  st_set_crs(value = 4326) %>%
+  st_transform(crs = 6345)
+
+elev_w
+
+summary(elev_w)
+```
+# EDA  
+```{r elev_w map}
+
+```
+Wait, wasn't this a point vector data? 
+How come it looks like polygons?  
+
+# Grid  
+Since we are interpolating, we need to create a grid (same as for the yield exercise) based on the field boundary.    
+
+```{r boundary_w}
+boundary_w <- read_sf("../data/KB_boundary.geojson") %>%
+  st_transform(crs = 6345)
+
+boundary_w
+```
+
+```{r grid_r}
+# grid in vector format
+grid_r <-  boundary_w %>%
+  st_make_grid(cellsize = 10) %>%
+  st_as_sf() %>%
+  st_rasterize(dx=10, dy=10) %>%
+  st_crop(boundary_w)
+
+grid_r
+
+ggplot()+
+  geom_stars(data = grid_r)+
+  mytheme_map
+
+```
+
+# Interpolation  
+```{r idw_mod}
+idw_mod 
+
+idw_mod
+```
+
+```{r idw_pred}
+idw_pred  
+
+idw_pred
+```
+
+```{r elev_map }
+elev_map 
+
+elev_map
+```
+
+# Computing secondary variables  
+## Slope  
+```{r slope}
+slope 
+
+slope
+```
+
+
+```{r slope map}
+slope_map <- ggplot()+
+  geom_stars(data = slope)+
+  geom_sf(data=boundary_w, fill=NA)+
+  scale_fill_gradient(low="black", high="white")+
+  labs(fill="Slope\n(rad)")+
+  mytheme_map
+
+slope_map
+```
+
+## Aspect  
+```{r aspect}
+aspect <- idw_pred %>%
+  dplyr::select(elev_m=var1.pred) %>%
+  terra::rast() %>%
+  ...
+  st_as_stars() %>%
+  st_set_crs(value =  6345)
+
+aspect
+```
+
+
+```{r aspect map}
+aspect_map <- ggplot()+
+  geom_stars(data = aspect)+
+  geom_sf(data=boundary_w, fill=NA)+
+  scale_fill_gradient(low="black", high="white")+
+  labs(fill="Aspect\n(rad.)")+
+  mytheme_map
+
+aspect_map
+```
+
+## Flow direction  
+```{r flowdir}
+flowdir <- idw_pred %>%
+  dplyr::select(elev_m=var1.pred) %>%
+  terra::rast() %>%
+  ...
+  st_as_stars() %>%
+  st_set_crs(value =  6345)
+
+flowdir
+```
+
+
+```{r flowdir map}
+flowdir_map <- ggplot()+
+  geom_stars(data = flowdir)+
+  geom_sf(data=boundary_w, fill=NA)+
+  scale_fill_gradient(low="black", high="white")+
+  labs(fill="Flow dir.\n(degree)")+
+  mytheme_map
+
+flowdir_map
+```
+
+```{r hill shade}
+  # Transforming from starts to raster to work with shade function
+slope_spv 
+
+aspect_spv
+
+hill
+
+hillshade_map <- ggplot()+
+  geom_stars(data=hill)+
+  scale_fill_gradient(low="black", high="white")+
+  geom_sf(data = boundary_w, fill=NA)+
+  labs(fill="Hill\nshade")+
+  mytheme_map
+
+hillshade_map
+```
+
+## Plotting all together
+```{r plotting all together}
+...
+
+ggsave("../output/terrain.png", width = 10, height = 6)
+```
+
+
+# Grid extraction  
+```{r elev_v}
+elev_v 
+
+elev_v
+```
+
+
+```{r slope_v}
+slope_v <- slope %>%
+  st_as_sf(as_points = F, 
+           merge = F) %>%
+  dplyr::select(slope=values) %>%
+  rownames_to_column(var = "id")
+
+slope_v
+```
+
+```{r aspect_v}
+aspect_v <- aspect %>%
+  st_as_sf(as_points = F, 
+           merge = F) %>%
+  dplyr::select(aspect=values) %>%
+  rownames_to_column(var = "id")
+
+aspect_v
+```
+
+```{r flowdir_v}
+flowdir_v <- flowdir %>%
+  st_as_sf(as_points = F, 
+           merge = F) %>%
+  dplyr::select(flowdir=values) %>%
+  rownames_to_column(var = "id")
+
+flowdir_v
+```
+
+```{r hillshade_v}
+hillshade_v <- hill %>%
+  st_as_sf(as_points = F, 
+           merge = F) %>%
+  dplyr::select(hillshade=values) %>%
+  rownames_to_column(var = "id")
+
+hillshade_v
+```
+
+# Merging all in topo variables in one object  
+```{r terrain_v }
+terrain_v 
+
+
+terrain_v
+```
+
+# Exporting  
+Exporting to file to use later for management zone creation.  
+```{r exporting}
+write_sf(terrain_v, "../data/terrain_v.geojson")
+```
+
+# Summary  
+Today we have:  
+- Imported point vector elevation data  
+- Interpolated elevation to same grid as used for yield (keeping them all on same spatial extent and resolution)  
+- Computed secondary terrain variables (slope, aspect, flow direction, hill shade)  
+- Transformed them into vector, joined all in one object, and exported to file  
+
+# What's next?  
+Next we will process the last piece of information: electrical conductivity (ec) data.  
+
+After being done with ec, we will be ready to create and validate management zones!  
+
+
