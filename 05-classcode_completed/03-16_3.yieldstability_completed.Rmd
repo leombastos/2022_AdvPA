@@ -33,6 +33,8 @@ yieldic17
 
 summary(yieldic17)
 ```
+
+
 ```{r yieldic19}
 yieldic19 <- read_sf("../data/KB2_Yield_2019_clean_ip.geojson")
 
@@ -189,12 +191,13 @@ st_all <- s_17 %>%
     T ~ "uns"
   ))
 
-st_all
+s_17  %>%
+  slice(4032:5000)
 ```
 ```{r st_all_map}
 ggplot()+
   geom_sf(data = st_all,
-          aes(fill=stnyield), color=NA)+
+          aes(fill=stnyield), color=NA)#+
     scale_fill_viridis_d(option="C")+
   theme_map()
 
