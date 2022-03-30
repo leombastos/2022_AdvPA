@@ -1,0 +1,274 @@
+---
+title: "03-30_5.soilECa"
+output: html_document
+---
+
+# Learning Objectives  
+
+Today, our objectives are to:  
+- Discuss about apparent soil electrical conductivity (ECa), what it is, how it is measured, and why it is an important layer in precision ag  
+
+- Import point vector data of soil ECa  
+- Interpolate soil ECa point data for two depths   
+- Export soil ECa layers to file  
+
+# Soil ECa  
+## What is electrical conductivity (EC)?  
+Soil sample is collected on the field, brought to a laboratory, saturated with water, and its extractant measured for electrical conductivity (EC) between two electrodes.  
+
+Time-consuming and labor-intensive, not feasible for PA applications.
+
+## What is bulk soil apparent electrical conductivity (ECa)?  
+Bulk soil apparent electrical conductivity measures EC of bulk soil (liquid and solid phases).  
+```{r @ bulk soil eca}
+knitr::include_graphics("https://agronomy.netlify.app/img/soileca/eca.png")
+
+```
+
+No need for sample collection, measures in-situ.  
+
+## How is soil ECa measured?  
+Three methods exist to measure bulk soil ECa:  
+- Electrical resistivity
+```{r ER - Veris 3100 }
+knitr::include_graphics("https://agronomy.netlify.app/img/soileca/ER.png")
+
+```
+
+
+- Electromagnetic induction  
+```{r EM - Geonics EM38}
+knitr::include_graphics("https://agronomy.netlify.app/img/soileca/EM.png")
+```
+
+
+- Time-domain reflectometry (TDR)  
+```{r TDR }
+knitr::include_graphics("https://agronomy.netlify.app/img/soileca/tdr.png")
+
+```
+
+
+## What affects soil ECa?  
+- Soil salinity:  
+```{r soil eca vs salinity}
+knitr::include_graphics("https://agronomy.netlify.app/img/soileca/ecavssalt.png")
+```
+
+- Soil texture:  
+```{r soil eca vs texture}
+knitr::include_graphics("https://agronomy.netlify.app/img/soileca/ecavstexture.png")
+
+```
+
+- Soil water content  
+```{r soil eca vs. swc}
+knitr::include_graphics("https://agronomy.netlify.app/img/soileca/ecavswater.png")
+
+```
+
+Others:  
+- Soil temperature  
+- Soil organic matter content  
+- Soil bulk density  
+
+
+## Why is it important in PA?  
+When soil ECa is mostly controlled by texture, it can be used to create texture-based zones.  
+
+This is important in PA because texture is normally correlated with other yield limiting factors like water availability, cation exchange capacity, and nutrient availability.  
+
+```{r soil eca vs yield}
+knitr::include_graphics("https://agronomy.netlify.app/img/soileca/ecavsyield.png")
+
+```
+
+# Setup  
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+# Packages
+library(dplyr)
+library(tidyr)
+library(janitor)
+library(readr)
+library(sf) #vector manipulation
+library(ggplot2)
+library(viridis)
+library(ggthemes)
+library(gstat) #IDW
+library(stars) #raster manipulation
+library(terra) #topographical variables
+library(patchwork) #combining multiple plots  
+library(tibble) #rownames to column
+
+```
+
+```{r defining map theme}
+mytheme_map <- 
+  theme_map()+
+  theme(legend.position = "right",
+        panel.background = element_rect(fill="gray80",
+                                        color=NA),
+        plot.background = element_rect(fill="gray80",
+                                       color=NA),
+        legend.title = element_text(size=14),
+        legend.text = element_text(size=12))
+
+```
+
+```{r reading elevation data}
+eca 
+
+eca
+```
+# Wrangling  
+```{r eca_w}
+eca_w <- eca %>%
+  clean_names() %>%
+  ...
+  st_as_sf(coords = c("x", "y")) %>%
+  st_set_crs(value = 4326) %>%
+  st_transform(crs = 6345)
+
+eca_w 
+```
+
+# EDA  
+```{r eca30 plot}
+
+
+```
+
+
+```{r eca90 plot}
+eca_w %>%
+  ggplot()+
+  geom_sf(aes(color=eca90_dsm),
+          size=.5)+
+  scale_color_viridis_b()+
+  mytheme_map
+
+```
+
+# Grid  
+Since we are interpolating, we need to create a grid (same as for the yield exercise) based on the field boundary.    
+
+```{r boundary_w}
+boundary_w <- read_sf("../data/KB_boundary.geojson") %>%
+  st_transform(crs = 6345)
+
+boundary_w
+```
+
+```{r grid_r}
+# grid in vector format
+grid_r <-  boundary_w %>%
+  st_make_grid(cellsize = 10) %>%
+  st_as_sf() %>%
+  st_rasterize(dx=10, dy=10) %>%
+  st_crop(boundary_w)
+
+grid_r
+
+ggplot()+
+  geom_stars(data = grid_r)+
+  mytheme_map
+
+```
+
+# Interpolation
+## eca30  
+```{r eca30_idw_mod}
+eca30_idw_mod <- gstat(formula = ... ~ 1,  
+                       data = eca_w)
+
+eca30_idw_mod
+```
+
+```{r eca30_idw_pred}
+eca30_idw_pred <- predict(eca30_idw_mod, grid_r) 
+
+eca30_idw_pred
+```
+
+```{r eca30_map }
+eca30_map 
+
+eca30_map
+```
+
+## eca90  
+```{r eca90_idw_mod}
+eca90_idw_mod <- gstat(formula = ... ~ 1,  
+                       data = eca_w)
+
+eca90_idw_mod
+```
+
+```{r eca90_idw_pred}
+eca90_idw_pred <- predict(eca90_idw_mod, grid_r) 
+
+eca90_idw_pred
+```
+
+```{r eca90_map }
+eca90_map <- ggplot()+
+  geom_stars(data = eca90_idw_pred)+
+  scale_fill_viridis_b()+
+  geom_sf(data=boundary_w, fill=NA)+
+  labs(fill="ECa\n0-90 cm\n(dS/m)")+
+  mytheme_map
+
+eca90_map
+```
+
+## Plotting all together
+```{r plotting all together}
+eca30_map + eca90_map
+ggsave("../output/soileca.png", width = 6, height = 3)
+```
+
+# Grid extraction  
+```{r eca30_v}
+eca30_v 
+
+eca30_v
+```
+
+
+```{r eca90_v}
+eca90_v <- eca90_idw_pred %>%
+  st_as_sf(as_points = F, 
+           merge = F) %>%
+  dplyr::select(eca90_dsm=var1.pred) %>%
+  rownames_to_column(var = "id")
+
+eca90_v
+```
+
+# Merging eca layers  
+```{r eca_v }
+eca_v  
+
+eca_v
+```
+
+# Exporting  
+Exporting to file to use later for management zone creation.  
+```{r exporting}
+write_sf(eca_v, "../data/eca_v.geojson")
+```
+
+# Summary  
+Today we have:  
+- Imported point vector soil ECa data  
+- Interpolated soil ECa at two different depths to same grid as used for yield (keeping them all on same spatial extent and resolution)  
+- Transformed them into vector, joined both depths in one object, and exported to file  
+
+# What's next?  
+Next we will be ready to create and validate management zones!
+
+For that, we will first load all layers created until now together.
+
+Then, we will check their relationships, run a tree algorithm to explore variable importance (more on that later), and finally use a clustering algorithm to create zones. 
