@@ -71,13 +71,12 @@ First let's calculate median yield per year, and then classify all yield observa
 Beginning with 2017 yield data.
 ```{r s_17}
 s_17 <- yieldic17 %>%
-  rownames_to_column(var = "id") %>%
   mutate(medianyield_lbac=median(ipyield_lbac)) %>%
   mutate(snyield=case_when(
     ipyield_lbac >= medianyield_lbac ~ "high",
     ipyield_lbac < medianyield_lbac ~ "low"
   )) %>%
-  dplyr::select(id, ipyield_lbac, snyield_17=snyield, geometry)
+  dplyr::select(ipyield_lbac, snyield_17=snyield, geometry)
 
 s_17
 ```
@@ -97,13 +96,12 @@ s_17_map
 Repeat the same steps for 2019.  
 ```{r s_19}
 s_19 <- yieldic19 %>%
-  rownames_to_column(var = "id") %>%
   mutate(medianyield_lbac=median(ipyield_lbac)) %>%
   mutate(snyield=case_when(
     ipyield_lbac >= medianyield_lbac ~ "high",
     ipyield_lbac < medianyield_lbac ~ "low"
   )) %>%
-  dplyr::select(id, snyield_19=snyield, geometry) 
+  dplyr::select(snyield_19=snyield, geometry) 
 
 s_19
 ```
@@ -123,13 +121,12 @@ s_19_map
 Repeat the same steps for 2020.  
 ```{r s_20}
 s_20 <- yieldic20 %>%
-  rownames_to_column(var = "id") %>%
   mutate(medianyield_lbac=median(ipyield_lbac)) %>%
   mutate(snyield=case_when(
     ipyield_lbac >= medianyield_lbac ~ "high",
     ipyield_lbac < medianyield_lbac ~ "low"
   )) %>%
-  dplyr::select(id, snyield_20=snyield, geometry) 
+  dplyr::select(snyield_20=snyield, geometry) 
 
 s_20
 ```
@@ -150,6 +147,9 @@ Let's plot all 3 maps side-by-side to assist in visualizing them.
 library(patchwork)
 s_17_map + s_19_map + s_20_map +
   plot_layout(guides = "collect")
+
+ggsave("../output/spatialstability.png",
+       width = 7, height = 3.5)
 
 ```
 
@@ -172,13 +172,12 @@ Here's how I want to classify our spatial-temporal classes:
 
 ```{r st_all}
 st_all <- s_17 %>%
-  left_join(s_19 %>%
-              as.data.frame() %>%
-              dplyr::select(-geometry)) %>%
-  left_join(s_20 %>%
-              as.data.frame() %>%
-              dplyr::select(-geometry)) %>%
-  
+  st_join(s_19,
+          join = st_equals, 
+          left = T) %>%
+  st_join(s_20,
+          join = st_equals, 
+          left = T) %>%
   mutate(stnyield=case_when(
     snyield_17 == snyield_19 & 
       snyield_17 == snyield_20 & 
@@ -191,15 +190,17 @@ st_all <- s_17 %>%
     T ~ "uns"
   ))
 
-s_17  %>%
-  slice(4032:5000)
+st_all
 ```
 ```{r st_all_map}
 ggplot()+
   geom_sf(data = st_all,
-          aes(fill=stnyield), color=NA)#+
+          aes(fill=stnyield), color=NA)+
     scale_fill_viridis_d(option="C")+
   theme_map()
+
+ggsave("../output/sp-temp-stability.png",
+       width = 6, height = 4)
 
 ```
 > Just eyeballing, what proportion of this field do you think is unstable? 20%? 50%?  
@@ -226,7 +227,8 @@ Imagine this is your farm, and I tell you that in about 43% of your field, yield
 Let's export this data set so we can use it again in a future exercise.  
 ```{r exporting yield stability}
 write_sf(st_all, 
-         "../data/st_all.geojson")
+         "../data/st_all.geojson",
+         delete_dsn = T)
 ```
 
 # Summary  

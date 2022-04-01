@@ -184,7 +184,8 @@ Since we will use this product in a future class (to look into yield stability a
 
 ```{r exporting}
 write_sf(idw_pred_v,
-         "../data/KB2_Yield_2017_clean_ip.geojson")
+         "../data/KB2_Yield_2017_clean_ip.geojson",
+         delete_dsn = T)
 ```
 
 

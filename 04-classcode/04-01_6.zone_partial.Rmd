@@ -1,0 +1,351 @@
+---
+title: "04-01_6.zone"
+output: html_document
+---
+
+# Lessons learned 
+- Do not use **left_join with spatial objects**. This can cause problems when joining layers with different number of cells (the case with slope and aspect as observations near the border are not computed). The fix is to use **st_join()** and change the `join` argument from its default of `st_intersects` to `st_equals`. Updated this on terrain, soilECa, and yield stability on code and exported layers.    
+
+- If you already have a spatial object created, using **write_sf()** and saving with the same file name doesn't overwrite it, but appends (doubling number of rows of saved file). The fix is to change **write_sf()** behavior to overwrite (instead of append) by changing the argument `delete_dsn = T`.  
+
+# Learning Objectives  
+Today's objectives are to:  
+- **Import** the processed (cleaned and interpolated) layers
+
+- Spatially **join** the layers above into one object  
+
+- Perform a clustering analysis called **k-means** to create zones  
+
+- **Assess** how variables are impacting different zones  
+
+- **Validate** zones with yield spatial-temporal stability areas  
+
+# Setup  
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+#install.packages("factoextra")
+#install.packages("NbClust")
+#install.packages("ggpubr")
+
+# Packages
+library(dplyr)
+library(tidyr)
+library(readr)
+library(sf) #vector manipulation
+library(ggplot2)
+library(viridis)
+library(ggthemes)
+library(patchwork) #combining multiple plots
+library(factoextra)
+library(NbClust)
+library(ggpubr)
+
+```
+
+# Data import  
+Let's import the layers we have produced until this point, including:
+- Terrain variables (elevation, slope, aspect, hill shade)  
+- Soil ECa (0-30 and 0-90 cm layers)  
+
+```{r terrain_v}
+terrain_v <- read_sf("../data/terrain_v.geojson")
+
+terrain_v
+```
+
+```{r eca_v }
+eca_v <- read_sf("../data/eca_v.geojson")
+
+eca_v
+```
+
+```{r boundary_w}
+boundary_w <- read_sf("../data/KB_boundary.geojson") %>%
+  st_transform(crs = 6345)
+
+boundary_w
+```
+
+
+# Joining all data together  
+```{r all_v}
+all_v 
+
+all_v
+```
+# EDA  
+```{r summary}
+summary(all_v)
+```
+Where do we see **NAs**? Why is that?  
+
+
+# k-means in theory  
+k-means is a unsupervised clustering algorithm that partitions the data into k groups, where k is defined by the user (i.e., you).  
+
+## How does k-mean works?  
+Let's look at the example below:  
+```{r k-means pre-clustering}
+knitr::include_graphics("https://agronomy.netlify.app/img/kmeans0.png")
+```
+> How many groups do we have above?  
+Can start by specifying a number of clusters (k) that makes sense.  
+
+However, sometimes it is **not that easy to visually assess** it if have many variables (each variable adds a dimension, how do you visualize a data set with 10 variables that we want to use for clustering?)
+
+Coming back to this example, here it is clear that k=3, so the **first step of the algorithm is to randomly select** 3 observations in the data set and have them as the cluster centers:  
+```{r k-means step1}
+knitr::include_graphics("https://agronomy.netlify.app/img/kmeans1.png")
+```
+- Once the cluster centers have been created, the algorithm calculates the **distance of all observations to each of the clusters centers**, and 
+
+- each observation of the entire data set is **assigned a cluster membership** to the cluster center (mean) closest to that observation (check this on the plot above).  
+
+- At this point, the algorithm uses all members of a cluster and **recalculates the cluster mean** (not an actual observation in the data as it was on the first step)  
+
+- The algorithm repeats the entire process until **cluster means stabilize**
+
+Let's check the entire process for this example below:
+```{r k-means in action}
+knitr::include_graphics("https://miro.medium.com/max/960/1*KrcZK0xYgTa4qFrVr0fO2w.gif")
+```
+
+## k-means properties  
+k-means:  
+- Is used for clustering (e.g., management zone creation)  
+- Is an **unsupervised** analysis (no outcome/response/y on a `y ~ x` formula)    
+- Only takes **predictors** (i.e., explanatory variables/x on a `y ~ x` formula).    
+- Predictors need to be **numerical**  (good bye flowdir)  
+
+## k-means shortcomings  
+k-means is useful when clusters are circular (not in a spatial context, but in a x vs. y plot context), but can fail badly when clusters have **odd shapes or outliers**.  
+
+Let's check how k-means (first column below) compares to other clustering algorithms (remaining columns) in classifying data sets with different shapes (rows):  
+```{r clustering algorithms comparison}
+knitr::include_graphics("https://miro.medium.com/max/1400/1*oNt9G9UpVhtyFLDBwEMf8Q.png")
+
+```
+> So, can we always use k-means for clustering?  
+
+However, it can be **difficult to visually assess clustering performance on data sets with many predictors** (remember, each variable adds one dimension, our brain can make sense of 4-5 dimensions max).  
+
+**The curse of dimensionality!**
+
+We can make use of some machine learning techniques like data train/validation/test splits and select model that most accurately predicts new data (beyond the scope of our class).  
+
+# k-means in practice  
+## Data prep for k-means  
+Before running k-means, we need to make sure that our data:  
+- **does not contain NA values** (k-means doesn't handle NAs and just throughs an error). Even a single cell with NA will cause issues. 
+
+- only contains **numerical columns** (k-means doesn't handle categorical variables) 
+
+```{r all_v_n}
+all_v_n  
+
+
+all_v_n
+```
+
+## Defining k  
+We need to define the number of clusters we want.  
+Let's try 4.  
+
+```{r kmeans initial model }
+mod_km  
+
+mod_km
+```
+The argument `nstart` defines how many times the algorithm should be run. This is important because of the random nature of selecting the observations on the first step. Having nstart=10 runs the model 10 times and avoids an unfortunate initial random selection that ends up creating clusters that do not represent the true data groups.  
+
+With **k=4**, our between/total SS was 63.7% (greater the better).    
+Let's try **k=3** and see what happens: between/total SS was ...%.  
+
+What about **k=10**? between/total SS was ...%.
+
+> So let's just select k=10, right?  
+
+The thing is that increasing k will always increase between/total SS.  We need to find the **sweet spot** where we have **enough ks that represent the actual groups within our data**, but no more that that.
+
+Also, think in a **PA application**. If your field really is highly variable and requires a large number of zones (i.e., k=10), then it is what it is. But if your field only truly has 2-3 zones, creating 10 zones adds extra complexity for the grower without really bringing the benefits (because 2-3 zones would've sufficed).
+
+So how do we **find the best k** value for a given data set?    
+
+## Finding k  
+Since the choice of k can be subjective, we will need to find an **objective** way to select the value of k that most properly represents our data set.  
+
+There are different tests and metrics that can be used to select k.  
+All of them run k-means with k ranging from 1 to 10 (in our case), and assess how much information is gained by adding each of the extra groups beyond 1.  
+
+Let's explore a few of these metrics:
+```{r finding k - wss method}
+# Total error x k
+```
+
+```{r finding k - silhouette method}
+# Silhouette width
+
+```
+What if different metrics give you a different recommendation on k?  
+
+We can compute multiple metrics, and select the k value recommended by the majority:
+
+**NOTE**: the code below took 5 minutes to run on my computer. **DO NOT RUN IT IN CLASS!**. You can run it later to check the result if you wish.  
+```{r finding k - multi-metric vote}
+# Voting from 26 indices  
+bestk <- NbClust(all_v_n,
+                 distance = "euclidean", 
+                 method ="kmeans", 
+                 index= "all",
+                 min.nc = 2, 
+                 max.nc = 6)
+
+fviz_nbclust(bestk) # 2 and 3 on std and raw
+
+```
+
+
+Let's go with 2 clusters:
+```{r mod_km2 }
+mod_km2 
+
+mod_km2
+```
+
+# Exploring clusters  
+Let's save cluster membership as a column in our data, and bring back the geometry so we can map it.  
+```{r zone_df }
+zone_df 
+
+zone_df
+
+```
+
+
+```{r cluster map}
+
+
+```
+How are clusters affected by the variables used to create them?  
+
+```{r cluster x variable boxplots}
+
+```
+
+# Validating clusters  
+Ok, so we have 2 clusters that are significantly different based on the variables we used to create them. Great!  
+
+> What does that mean for yield though? 
+> Are these two clusters creating different yield levels?  
+> How can we test that?  
+
+
+
+
+
+```{r yield stability data}
+st_all <- read_sf("../data/st_all.geojson")
+
+st_all 
+```
+
+```{r joining st_all and zone_df}
+zone_st 
+
+zone_st
+```
+
+
+```{r contingency table for 2017 yield}
+
+
+```
+
+```{r contingency table for 2019 yield}
+zone_st %>%
+  st_drop_geometry() %>%
+  group_by(cluster) %>%
+  mutate(N=length(cluster)) %>%
+  group_by(cluster, ... , N) %>%
+  tally() %>%
+  mutate(prop=(n/N)*100) %>%
+  mutate(prop=round(prop,0)) %>%
+  ggplot(aes(x=... , y=prop, fill=... ))+
+  geom_col(position="dodge", color="black")+
+  scale_fill_viridis_d(option="E")+
+  facet_grid(~cluster)+
+  geom_text(aes(label=paste0(prop,"%"), y=prop+5))+
+  theme(legend.position = "none")
+
+```
+
+
+```{r contingency table for 2020 yield}
+zone_st %>%
+  st_drop_geometry() %>%
+  group_by(cluster) %>%
+  mutate(N=length(cluster)) %>%
+  group_by(cluster, ... , N) %>%
+  tally() %>%
+  mutate(prop=(n/N)*100) %>%
+  mutate(prop=round(prop,0)) %>%
+  ggplot(aes(x=... , y=prop, fill=... ))+
+  geom_col(position="dodge", color="black")+
+  scale_fill_viridis_d(option="E")+
+  facet_grid(~cluster)+
+  geom_text(aes(label=paste0(prop,"%"), y=prop+5))+
+  theme(legend.position = "none")
+
+```
+
+I suppose we can call cluster ... as high yield and cluster ... as lower yield, right?  
+
+Now, what about temporal stability?  
+```{r contingency table for yield stability}
+zone_st %>%
+  st_drop_geometry() %>%
+  group_by(cluster) %>%
+  mutate(N=length(cluster)) %>%
+  group_by(cluster, ... , N) %>%
+  tally() %>%
+  mutate(prop=(n/N)*100) %>%
+  mutate(prop=round(prop,0)) %>%
+  ggplot(aes(x=... , y=prop, fill=... ))+
+  geom_col(position="dodge", color="black")+
+  scale_fill_viridis_d(option="C")+
+  facet_grid(~cluster)+
+  geom_text(aes(label=paste0(prop,"%"), y=prop+5))+
+  theme(legend.position = "none")
+
+```
+Based on individual-year data, it appeared that each zone clearly represented different yield potentials.  
+
+However, when bringing the temporal component, we see that many cells within both zones can flip yield in different years.  
+
+> How can we handle that? How would you handle that if this were your field?    
+
+# Exporting clusters  
+```{r exporting clusters}
+zone_st %>%
+  ... 
+  write_sf("../data/zone_st.geojson") 
+```
+
+# Summary  
+Today we:  
+- Talked about some tips for joining spatial data and saving to file  
+- Imported all processed layers  
+- Learned about the k-means algorithm  
+- Found the best k for our data set  
+- Created k=2 zones  
+- Explored the main zone drivers  
+- Validated zones with yield spatial-temporal stability areas  
+
+# Next steps  
+To wrap up this entire exercise, the next steps will be to:  
+- decide how to handle spatial-temporal stability  
+- create zone-specific variable rate recommendations  
+- create profitability maps  
+
+
