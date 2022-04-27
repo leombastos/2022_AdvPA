@@ -35,7 +35,7 @@ From that table and accompanying text on the guide, we can see that cotton total
 - Should be **adjusted in +25%** in certain cases (e.g., cotton following cotton)    
 - Should be **split-applied**  
 
-> So, what are the required pieces of information that we need to know in order to make a recommendation of split N application in cotton?  
+> So, what are the required pieces of information that we need to know in order to make a recommendation of N in cotton?  
 
 1.  
 2.  
@@ -73,7 +73,8 @@ mytheme_map <-
 
 
 ```{r yieldic17}
-yieldic17 
+yieldic17 <- read_sf("../data/KB2_Yield_2017_clean_ip.geojson") %>%
+  ...
 
 yieldic17
 
@@ -83,13 +84,12 @@ summary(yieldic17)
 
 ```{r yieldic19}
 yieldic19 <- read_sf("../data/KB2_Yield_2019_clean_ip.geojson") %>%
-  dplyr::select(yield19_lbac=ipyield_lbac, geometry)
+  ...
 
 yieldic19
 
 summary(yieldic19)
 ```
-
 
 ```{r yieldic20}
 yieldic20 <- read_sf("../data/KB2_Yield_2020_clean_ip.geojson") %>%
@@ -102,17 +102,31 @@ summary(yieldic20)
 ```
 
 ```{r zone_st}
-zone_st 
+zone_st <- read_sf("../data/zone_st.geojson") %>%
+  dplyr::select(zone, geometry)
 
 zone_st
 ```
 
 # Wrangling  
 ```{r Merging yield and zones}
-zone_yield 
+zone_yield <- zone_st %>%
+  st_join(yieldic17,
+          join = st_equals, 
+          left = T
+  ) %>%
+  st_join(yieldic19,
+          join = st_equals, 
+          left = T
+  ) %>%
+  st_join(yieldic20,
+          join = st_equals, 
+          left = T
+  ) 
 
 zone_yield
 ```
+
 # VRN  
 Below, we will
 - Calculate zone-specific yield potential (as the mean of 3 years)    
@@ -151,7 +165,7 @@ NOTE: UAN is normally sold as 28, 30, or 32%N. Each of them has a different dens
 
 
 ```{r UAN volume to mass of N}
-uan28density_lbsgal
+uan28density_lbsgal 
 
 uan28Nconc_pct 
 
@@ -172,7 +186,6 @@ vrn
 ```{r vrn vector}
 vrn_v 
 
-vrn_v
 ```
 
 ```{r vrn plot}
@@ -185,6 +198,7 @@ vrn_v %>%
        fill="UAN rate\n(gal/ac)",
        color="UAN rate\n(gal/ac)")+
   mytheme_map
+
 
 ggsave("../output/VRN.png",
       width = 4, 
@@ -199,7 +213,9 @@ We are going to export as **shapefile** as it is the most commonly accepted form
 Since we are exporting as shapefile, let's create a sub-folder inside `output` called `VRN` to have all the associated files saved together.  
 
 ```{r exporting}
-vrn_v 
+vrn_v %>%
+  ...
+
 ```
 
 # Summary  
