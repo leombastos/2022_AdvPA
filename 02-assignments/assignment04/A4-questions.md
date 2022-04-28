@@ -27,7 +27,7 @@ After pasting all maps on word, resize each of them to be 1.56 inch height x 1.1
 
 ---
 
-After answering all questions, send me the word file with all 5 maps and answers to questions 3 to 5. Include your initials on the word file name (e.g., A4-questions-LMB.docx) and send to **lmbastos@uga.edu** by **Wednesday, April 27th 11:59 pm**.  
+After answering all questions, send me the word file with all 5 maps and answers to questions 3 to 5. Include your initials on the word file name (e.g., A4-questions-LMB.docx) and send to **lmbastos@uga.edu** by **Wednesday, May 4th 11:59 pm**.  
 
 
 
