@@ -1,0 +1,187 @@
+---
+title: "Final Project Instructions"
+output: html_document
+---
+
+# 1. Introduction  
+After taking the Advanced Precision Agriculture (PA) course at UGA, you decided it was time to open your own PA consulting business to offer science-based PA services to producers in Georgia.  
+
+Your first client is Natalie Rojas. Rojas wants to experiment with PA, but has seen her neighbors use out-of-the-box PA services that don't seem to work reliably. She heard about your science-based PA approach, and was very interested in trying out your services in one of her **irrigated** fields. 
+
+Having herself graduated from UGA with a degree in crop and soil sciences, Natalie is very curious about the steps you will be taking and how decisions are made in your workflow. 
+
+Natalie is interested to learn whether her field has different zones related to yield potential, and if she should use variable rate fertilizer application to reduce costs and improve efficiencies in her operation.  
+
+Natalie provides you with 4 layers of information from her field: 
+
+- Field boundary  
+- **Corn** yield (in bu/ac) for one year  
+- Soil ECa (in dS/m)    
+- Elevation (in feet)  
+
+Natalie also provides you with the following history of her field:  
+- The next crop to be planted will be corn   
+- The previous crop was peanut  
+- Levels of phosphorus (P) and potassium (K) for this field are very high, and pH is ~ 6.  
+
+
+# 2. Directions  
+## Data  
+All four data layers above were uploaded to GitHub and can be found in folder `06-finalproject`.  
+
+Some layers are in csv format, others are in shapefile format.  
+
+## Set up  
+Because this is data and analysis for a different field from the one we did in class, you **should not** use the same RStudio project and folders from class.  
+
+As a suggestion, you could follow these steps:  
+- On your overall course folder, create a new folder called `finalproject-INITIALS`.  
+
+- Go inside this folder, and create the sub-folders `data`, `code` and `output`.  
+
+- Download the class GitHub repository (https://github.com/leombastos/2022_AdvPA). 
+
+
+- Copy the data files from `06-finalproject` and paste them inside your `data` folder.  
+
+- Copy the `ProjectInstructions.Rmd` file and paste it inside your `code` folder.  
+
+- Launch RStudio.   
+
+- Create a New Project, and have it created at the level of your `finalproject-INITIALS` folder.  
+
+For a refresher on this process, please watch our class recordings.  
+
+## Workflow  
+You are required to follow a similar workflow from what we did in class:  
+
+- Wrangle and clean yield data  
+- Interpolate cleaned yield data  
+- Perform yield stability analysis  
+- Use elevation and create all the interpolated terrain variables we did in class  
+- Interpolate soil ECa for the two different depths  
+- Bring all the layers together to create zones using k-means  
+- Smooth zones, validate them with terrain, soil ec, and yield variables  
+- Create a (possibly variable rate) N prescription  
+
+Remember that you will need to adapt our class code to match these new data sets, which may be of different types and have some different column names.  
+
+You can and should use our class code as a reference. However, **make sure you understand what each step and chunk is doing**. Simply copying and pasting and trying to run everything without thinking through will for sure cause lots of code errors, and take away from you the opportunity to revise what we learned in a concise way.  
+
+I would suggest you have a separate Rmarkdown script for each step (as we did in class).  
+
+## Troubleshooting  
+You will for sure run into code issues.  
+This is common and expected, and part of the learning process.  
+
+While this is an individual project, I do encourage all students to help each other, especially as you will likely run into similar problems.  
+
+For that to work, we will be using **GitHub** to ask and answer questions.  
+If you don't have an account yet, please go ahead and sign up for free at www.github.com.  
+
+ALL QUESTIONS should be asked in our course GitHub page (https://github.com/leombastos/2022_AdvPA) under "Issues". **Please do not use email for asking questions**.
+
+Make sure to **"Watch"** the repository so you get notified when someone posts on Issues.  
+
+We will go through this in class to have an example.  
+
+> I anticipate all of you will have multiple questions. The goal with using GitHub is that you can help each other. Depending how that works, I will give extra credit for participation in helping others with their questions.  
+
+With that, when you have issues running code, here are a few resources you can use, in chronological order:  
+
+- **Yourself**: Read the error message, see if you can interpret it and understand what is going on. A message like "Error: object yield could not be found" is self-explanatory.    
+- **Google**: Sometimes just copying an error message and pasting on Google can help you find posts with the answer.  
+- **Peers**: ask your classmates using GitHub.  
+- **Me**: after you have gone through all the sources above without success, I will certainly be glad to assist you. I want to be the last resource you use because that's how it will be after our class is finished: I will be available to assist you in anything R-related in your career, but you will also need to attempt solving them before you reach out.  
+
+# 3. Questions  
+Once you get started and as you progress in the project tasks, Natalie is following closely your work and has multiple questions for you:
+
+
+## Yield editing  
+1. What is the number of observations, minimum, mean, maximum, and standard deviation for the **raw** yield data (in bu/ac)?  
+
+
+2. How many meters of negative buffer did you use for this field? Was that enough to remove low yielding data points near the field border?   
+
+
+3. What is the number of observations, minimum, mean, maximum, and standard deviation for the **cleaned** yield data (in bu/ac)?  
+
+
+## Interpolation  
+4. When creating a grid for interpolation, what grid cell size did you use? Why did you select this size?  
+
+
+## Zone  
+5. How many zones did you decide that this field needs? What metric did you use to make this decision? (check the `Code tips` section below for a note on this).  
+
+
+6. When smoothing zones, what matrix size did you use? Why? Did you test if other sizes worked better when creating continuous and compact clusters?   
+
+
+7. What was the proportion of high and low yield areas for each of the clusters? Based on that, how would you classify each cluster (e.g., cluster x is high yielding and cluster y is low yielding)?  
+
+
+8. Now that we know the yield class of each cluster, how are they affected by soil ECa at different depths, and by elevation (e.g., high yield cluster has higher/lower eca, etc.)?  
+
+
+9. Based on your previous answer, how would you explain the effect of soil ECa and elevation on yield potential?   
+
+
+10. Were you able to validate clusters with temporal yield data? Explain why/why not.  
+
+
+11. Given the number of years with available yield data, how certain are you in using these zones for multiple years into the future? What would you explain to Natalie about the validity of the zones, and what do you propose to overcome this in coming years?  
+
+
+
+## VRN  
+12. What was the yield potential (in bu/ac) of each zone?
+
+
+13. How did you determine the total N rate (what algorithm, from which website)?  
+
+14. What was the in-season UAN28% rate (in gal/ac) of each zone?  
+
+15. Based on the answers above, would you recommend Natalie to treat her field using variable rate N application? Why/why not? Explain as if you were speaking with her.  
+
+
+16. Regardless of your recommendation above, Natalie will still need to apply N to this field. How many gallons of UAN28% would Natalie need to order for her in-season N application for this field?  
+
+
+# 4. Deadline  
+The final project should be submitted by **May 11th** 11:59 pm.   
+
+
+# 5. Submiting your work  
+To submit it, zip your `finalproject-INITIALS` folder and send me this zipped file (which will include all your data, code, outputs, RStudio project, etc.).  
+
+That way, I will be able to reproduce your work, check your answers, and also assess how you progressed.   
+
+You can answer the questions directly on this file here, which should be saved on your `code` folder.  
+
+# 6. Code tips  
+## Data import  
+- Check that the path you are specifying is correct  
+- Check that you are using the proper function based on the file type (read_csv for csv files, read_sf for shape files/vector data)  
+- To import a shapefile, specify the `.shp` file in the path inside `read_sf()` function.   
+
+## Troubleshooting a pipe stream  
+- If you run a pipe stream (multiple functions connected by multiple pipes) and there is error in the code, comment off the first pipe, run it. If problem did not appear, uncomment this first pipe, comment off second pipe, run it. Keep doing this until you find what function in the pipe is causing the error. That will make it easier to pinpoint where the error is coming from and address it.  
+
+## Joining spatial data  
+- In class, I first showed you how to join spatial layers using `left_join()`. We then concluded this was not the best way, and switched to using `st_join()` and changing the behavior of two of its arguments: `st_join(join = st_equals, left = T)`. Make sure to use this when joining spatial layers into one object!  
+## K-means: finding k  
+- When defining the proper number of clusters (k) for this data, only use the techniques `WSS` and `Silhouette width`. **Do not** attempt to run the analysis code that contains multiple indices (function `NbClust()`). I tried that on my computer, and for some reason it was not working properly, and it also takes a long time to run which was making my RStudio crash.  
+
+
+## Exporting spatial data to file  
+- To export a spatial vector to file, we use the fuction `write_sf()`. Don't forget to change one of its arguments to make sure you don't append (duplicate the number of rows) in case you already have the same file saved from a previous run: `write_sf(delete_dsn = T)`.  
+
+
+
+
+
+
+
+

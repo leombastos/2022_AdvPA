@@ -245,7 +245,13 @@ zone_df <- all_v_n %>%
 
 zone_df
 
+zone_df %>%
+  group_by(cluster) %>%
+  tally()
+
 ```
+
+
 ```{r cluster map}
 zone_df %>%
   ggplot()+
@@ -269,6 +275,7 @@ knitr::include_graphics("https://geocompr.robinlovelace.net/figures/04_focal_exa
 ```
 
 ```{r grid_r}
+library(stars)
 # grid in vector format
 grid_r <-  boundary_w %>%
   st_make_grid(cellsize = 10) %>%
@@ -418,6 +425,8 @@ zone_st %>%
   theme(legend.position = "none")
 
 ```
+
+
 ```{r contingency table for 2020 yield}
 zone_st %>%
   st_drop_geometry() %>%
@@ -448,12 +457,20 @@ zone_st %>%
   tally() %>%
   mutate(prop=(n/N)*100) %>%
   mutate(prop=round(prop,0)) %>%
+  mutate(cluster_s=paste0("Cluster ", cluster_s)) %>%
   ggplot(aes(x=stnyield, y=prop, fill=stnyield))+
   geom_col(position="dodge", color="black")+
   scale_fill_viridis_d(option="C")+
   facet_grid(~cluster_s)+
   geom_text(aes(label=paste0(prop,"%"), y=prop+5))+
+  labs(y="Zone area within each class (%)",
+       x="Spatial-temporal stability class")+
   theme(legend.position = "none")
+
+ggsave("../output/zonevalidation_yield.png",
+       width = 5,
+       height = 3
+       )
 
 ```
 Based on individual-year data, it appeared that each zone clearly represented different yield potentials.  
@@ -507,13 +524,14 @@ zone_st %>%
 ```
 
 > How would we explain the effect of covariates on the unstable areas?  
+
 > Looking speficially at the ECa and slope plots, what do you think is happening?  
 
 
 # Exporting clusters  
 ```{r exporting clusters}
 zone_st %>%
-  mutate(zone=ifelse(cluster=="1", "low", "high")) %>%
+  mutate(zone=ifelse(cluster_s=="1", "low", "high")) %>%
   write_sf("../data/zone_st.geojson",
            delete_dsn = T) 
 ```
